@@ -1,0 +1,8 @@
+{
+  plants: [],
+  plant_filter: {
+    number_of_plants: 5,
+    location: "",
+    cattle: []
+  },
+}
