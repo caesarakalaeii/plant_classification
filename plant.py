@@ -1,4 +1,4 @@
-class PLant:
+class Plant:
     is_toxic: bool
     scientific_name: str
     gbif_key: str
@@ -6,24 +6,22 @@ class PLant:
     gbif_data: dict
     gbif_data_count: int
 
-    #TODO: Add functions to generate data on the fly
-    # 1. fetch data from data frame
-    # 2. fetch key from GBIF
-    # 3. fetch data from GBIF
-    # 4. add functionality for comparison
-
 
 import os
 import requests
 from pygbif.occurrences import search
 
-def download_gbif_images_with_pygbif(plant_name, max_pictures, save_dir="gbif_images"):
+def pretty_print(input):
+    for key, value in input.items():
+        print(f'{key}: {value}')
+
+def download_gbif_images_with_pygbif(plant_names, max_pictures, save_dir="gbif_images", country = "DE", months= [5]):
     """
     Downloads images associated with a plant name from GBIF using pygbif.
 
     Parameters:
-        plant_name (str): The scientific name of the plant.
-        max_pictures (int): Maximum number of images to download.
+        plant_names [str]: The scientific name of the plant.
+        max_pictures (int): Maximum number of images to download per plant.
         save_dir (str): Directory to save the downloaded images.
 
     Returns:
@@ -32,42 +30,46 @@ def download_gbif_images_with_pygbif(plant_name, max_pictures, save_dir="gbif_im
     # Create the save directory if it does not exist
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
+    for plant_name in plant_names:
+        if not os.path.exists(save_dir + "/" + plant_name):
+            os.makedirs(save_dir + "/" + plant_name)
+        for month in months:
+            # Search for occurrences with media (images) using pygbif
+            results = search(scientificName=plant_name, mediaType="StillImage", limit=int(max_pictures/len(months)), country=country, month=month)
 
-    # Search for occurrences with media (images) using pygbif
-    results = search(scientificName=plant_name, mediaType="StillImage", limit=max_pictures)
+            if not results.get("results"):
+                print(f"No images found for plant: {plant_name}")
+                return
 
-    if not results.get("results"):
-        print(f"No images found for plant: {plant_name}")
-        return
+            # Loop through the results to download images
+            for i, record in enumerate(results["results"]):
+                pretty_print(record)
+                media_items = record.get("media", [])
+                if not media_items:
+                    continue  # Skip records without media
 
-    # Loop through the results to download images
-    for i, record in enumerate(results["results"]):
-        media_items = record.get("media", [])
-        if not media_items:
-            continue  # Skip records without media
+                for media_item in media_items:
+                    image_url = media_item.get("identifier")
+                    if not image_url:
+                        continue
 
-        for media_item in media_items:
-            image_url = media_item.get("identifier")
-            if not image_url:
-                continue
+                    # Download the image
+                    try:
+                        img_response = requests.get(image_url, stream=True)
+                        img_response.raise_for_status()
 
-            # Download the image
-            try:
-                img_response = requests.get(image_url, stream=True)
-                img_response.raise_for_status()
+                        # Save the image
+                        file_extension = os.path.splitext(image_url)[-1] or ".jpg"
+                        file_name = f"{plant_name.replace(' ', '_')}_{month}_{i+1}{file_extension}"
+                        file_path = os.path.join(save_dir + "/" + plant_name, file_name)
 
-                # Save the image
-                file_extension = os.path.splitext(image_url)[-1] or ".jpg"
-                file_name = f"{plant_name.replace(' ', '_')}_{i+1}{file_extension}"
-                file_path = os.path.join(save_dir, file_name)
+                        with open(file_path, "wb") as img_file:
+                            for chunk in img_response.iter_content(1024):
+                                img_file.write(chunk)
 
-                with open(file_path, "wb") as img_file:
-                    for chunk in img_response.iter_content(1024):
-                        img_file.write(chunk)
-
-                print(f"Downloaded: {file_name}")
-            except requests.RequestException as e:
-                print(f"Failed to download image: {image_url}. Error: {e}")
+                        print(f"Downloaded: {file_name}")
+                    except requests.RequestException as e:
+                        print(f"Failed to download image: {image_url}. Error: {e}")
 
 # Example usage
-download_gbif_images_with_pygbif("Rosa rubiginosa", 5)
+download_gbif_images_with_pygbif(["Jacobaea vulgaris", "Datura stramonium"], 20, country="DE", months=[11,12,1])
