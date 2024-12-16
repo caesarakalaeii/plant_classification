@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 3
+names: ['Colchicum autumnale L', 'Digitalis L', 'Jacobaea vulgaris']
+
+roboflow:
+  workspace: plant-classification-upubc
+  project: plant-classification-k4g0h
+  version: 1
+  license: Private
+  url: https://app.roboflow.com/plant-classification-upubc/plant-classification-k4g0h/1
