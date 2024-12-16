@@ -11,11 +11,14 @@ import os
 import requests
 from pygbif.occurrences import search
 
+
 def pretty_print(input):
     for key, value in input.items():
         print(f'{key}: {value}')
 
-def download_gbif_images_with_pygbif(plant_names, max_pictures, save_dir="gbif_images", country = "DE", months= [5], overwrite_file_name= None):
+
+def download_gbif_images_with_pygbif(plant_names, max_pictures, save_dir="gbif_images", country="DE", months=[5],
+                                     overwrite_file_name=None):
     """
     Downloads images associated with a plant name from GBIF using pygbif.
 
@@ -39,15 +42,20 @@ def download_gbif_images_with_pygbif(plant_names, max_pictures, save_dir="gbif_i
                 os.makedirs(save_dir + "/" + plant_name)
         for month in months:
             # Search for occurrences with media (images) using pygbif
-            results = search(scientificName=plant_name, mediaType="StillImage", limit=int(max_pictures/len(months)), country=country, month=month)
+            # adding 10% buffer for non image Images
+            results = search(scientificName=plant_name, mediaType="StillImage",
+                             limit=int((max_pictures * 1.1) / len(months)), country=country, month=month)
 
             if not results.get("results"):
                 print(f"No images found for plant: {plant_name}")
                 return
 
+            i = 0
             # Loop through the results to download images
-            for i, record in enumerate(results["results"]):
+            for record in results["results"]:
                 # pretty_print(record)
+                if i > max_pictures / len(months):
+                    break
                 media_items = record.get("media", [])
                 if not media_items:
                     continue  # Skip records without media
@@ -67,10 +75,10 @@ def download_gbif_images_with_pygbif(plant_names, max_pictures, save_dir="gbif_i
                         if file_extension not in [".jpg", ".jpeg", ".png", ]:
                             continue
                         if overwrite_file_name is None:
-                            file_name = f"{plant_name.replace(' ', '_')}_{month}_{i+1}{file_extension}"
+                            file_name = f"{plant_name.replace(' ', '_')}_{month}_{i + 1}{file_extension}"
                             file_path = os.path.join(save_dir + "/" + plant_name, file_name)
                         else:
-                            file_name = f"{plant_name.replace(' ', '_')}_{month}_{i+1}{file_extension}"
+                            file_name = f"{plant_name.replace(' ', '_')}_{month}_{i + 1}{file_extension}"
                             file_path = os.path.join(save_dir + "/" + overwrite_file_name, file_name)
 
                         with open(file_path, "wb") as img_file:
@@ -78,12 +86,14 @@ def download_gbif_images_with_pygbif(plant_names, max_pictures, save_dir="gbif_i
                                 img_file.write(chunk)
 
                         print(f"Downloaded: {file_name}")
+                        i = i + 1
                     except requests.RequestException as e:
                         print(f"Failed to download image: {image_url}. Error: {e}")
                         continue
 
+
 # Example usage
 # download plants to classify
-download_gbif_images_with_pygbif(["Jacobaea vulgaris", "Digitalis L.", "Colchicum autumnale L."], 160, country="DE", months=[4,5,6,7,8])
+download_gbif_images_with_pygbif(["Colchicum autumnale L."], 160, country="DE", months=[4, 5, 6, 7, 8])
 # Download Filler plants
-download_gbif_images_with_pygbif(["Achillea millefolium", "Fagus sylvatica", "Corylus avellana", "Quercus robur", "Urtica dioica", "Hedera helix", "Sambucus nigra", "Acer pseudoplatanus", "Glechoma hederacea", "Plantago lanceolata", "Ranunculus repens"], 20, country="DE", months=[4,5,6,7,8], overwrite_file_name="no_class")
+# download_gbif_images_with_pygbif(["Achillea millefolium", "Fagus sylvatica", "Corylus avellana", "Quercus robur", "Urtica dioica", "Hedera helix", "Sambucus nigra", "Acer pseudoplatanus", "Glechoma hederacea", "Plantago lanceolata", "Ranunculus repens"], 20, country="DE", months=[4,5,6,7,8], overwrite_file_name="no_class")
