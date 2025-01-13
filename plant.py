@@ -94,6 +94,6 @@ def download_gbif_images_with_pygbif(plant_names, max_pictures, save_dir="gbif_i
 
 # Example usage
 # download plants to classify
-download_gbif_images_with_pygbif(["Colchicum autumnale L."], 160, country="DE", months=[4, 5, 6, 7, 8])
+#download_gbif_images_with_pygbif(["Colchicum autumnale L."], 160, country="DE", months=[4, 5, 6, 7, 8])
 # Download Filler plants
 # download_gbif_images_with_pygbif(["Achillea millefolium", "Fagus sylvatica", "Corylus avellana", "Quercus robur", "Urtica dioica", "Hedera helix", "Sambucus nigra", "Acer pseudoplatanus", "Glechoma hederacea", "Plantago lanceolata", "Ranunculus repens"], 20, country="DE", months=[4,5,6,7,8], overwrite_file_name="no_class")
