@@ -2,7 +2,7 @@ from ultralytics import YOLO
 
 model = YOLO("training/Models/best_train13.pt")
 
-result = model("training/data/plant classification/test/images/Digitalis_L-_4_6_jpg.rf.6648ff491b14e75efb64881da024062d.jpg")
+result = model("training/data/plant classification/test/images/Colchicum_autumnale_L-_5_20_jpeg.rf.6d24d8ed1ffa9bfd45e00a9a6f5a20f4.jpg")
 
 for bb in result:
     print(bb.boxes.cls[0])
