@@ -15,10 +15,32 @@ import pygame
 # missing feature: Displaying the detected plant with the highest confidience score ~
 #                  swaping between BOundary boxes and Confidence scores of plants via toggle button ADDED
 #                  cool sound effect when loading a picture ADDED
-class ImageViewer(BoxLayout):
-    def __init__(self, **kwargs):
-        super().__init__(orientation='vertical', **kwargs)
+class ModelPathSelector(Popup):
+    def __init__(self, app, **kwargs):
+        super().__init__(title='Select a YOLO Model', size_hint=(0.9, 0.9), **kwargs)
+        self.app = app
         
+        layout = BoxLayout(orientation='vertical')
+        self.filechooser = FileChooserIconView(path=os.getcwd(), dirselect=True)
+        layout.add_widget(self.filechooser)
+        
+        btn_select = Button(text='Select Folder', size_hint_y=None, height=50)
+        btn_select.bind(on_press=self.select_model_path)
+        layout.add_widget(btn_select)
+        
+        self.content = layout
+    
+    def select_model_path(self, instance):
+        if self.filechooser.selection:
+            self.app.selected_model_path = self.filechooser.selection[0]
+            self.dismiss()
+            self.app.start_main_app()
+
+class ImageViewer(BoxLayout):
+    def __init__(self,selected_model_path, **kwargs):
+        super().__init__(orientation='vertical', **kwargs)
+        self.selected_model_path = selected_model_path
+        print(self.convert_path())
         self.image = Image()
         self.add_widget(self.image)
 
@@ -48,8 +70,8 @@ class ImageViewer(BoxLayout):
         self.show_bboxes_conf = False
         self.sound_on = False
         self.yolo_model = YOLO("training/Models/best_train13.pt")  # Pfad für das YOlo Modell
-        pygame.mixer.init()
-        pygame.mixer.music.load("Soundfiles/magic-3-278824.mp3")
+        #pygame.mixer.init()
+        #pygame.mixer.music.load("Soundfiles/magic-3-278824.mp3")
 
     def show_filechooser(self, instance):
         filechooser = FileChooserIconView(path=os.getcwd())
@@ -122,11 +144,21 @@ class ImageViewer(BoxLayout):
             corner_positions = [(self.image.width, self.image.height), (200, self.image.height+95), (0, height - size), (width - size, height - size)]
             for x, y in corner_positions:
                 Ellipse(pos=(x, y), size=(size, size))
+
+    def convert_path(self):
+        return_path = self.selected_model_path.replace(os.getcwd()+"\\","")
+        return return_path.replace("\\","/")
+    
 class ImageApp(App):
     def build(self):
-        return ImageViewer()
-
+        self.selected_model_path = None
+        self.path_selector = ModelPathSelector(self)
+        self.path_selector.open()
+        return BoxLayout()
+    
+    def start_main_app(self):
+        self.root.clear_widgets()
+        self.root.add_widget(ImageViewer(self.selected_model_path))
 if __name__ == '__main__':
     ImageApp().run()
-
 
