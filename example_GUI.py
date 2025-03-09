@@ -10,7 +10,7 @@ from kivy.uix.label import Label
 from kivy.graphics import Color, Line, Rectangle, Ellipse
 from ultralytics import YOLO
 import os
-import pygame
+# import pygame
 # still some bugs with displaying multibe confidience Score values -> example start app and load Digitalis_L_29.jpeg
 # missing feature: Displaying the detected plant with the highest confidience score ~
 #                  swaping between BOundary boxes and Confidence scores of plants via toggle button ADDED
@@ -39,36 +39,63 @@ class ModelPathSelector(Popup):
 class ImageViewer(BoxLayout):
     def __init__(self,selected_model_path, **kwargs):
         super().__init__(orientation='vertical', **kwargs)
-        self.selected_model_path = selected_model_path
-        print(self.convert_path())
+
+        # Add canvas to main layout
         self.image = Image()
         self.add_widget(self.image)
 
-        button_layout = GridLayout(cols=2, size_hint_y=None, height=100)
+        button_layout = GridLayout(cols=2, size_hint_y=None, height=50)
 
         self.btn_load = Button(text='Load Image', size_hint_y=None, height=50)
         self.btn_load.bind(on_press=self.show_filechooser)
         button_layout.add_widget(self.btn_load)
-        
+
+        # Add Togglebutton for Boundingbox & Conf
         self.toggle_bbox_conf = ToggleButton(text='Show Bounding Boxes & Confidence', state='normal', size_hint_y=None, height=50)
         self.toggle_bbox_conf.bind(on_press=self.toggle_bounding_boxes_confidence)
         button_layout.add_widget(self.toggle_bbox_conf)
         
         # Three-Stage Button with Text Fields
-        self.stage_button = Button(text="all plants")
-        self.stage_button.bind(on_press=self.next_stage)
-        button_layout.add_widget(self.stage_button)
-        
-        self.sound_button = ToggleButton(text='Enable Sound', state='normal', size_hint_y=None, height=50)
-        self.sound_button.bind(on_press=self.toggle_sound)
-        button_layout.add_widget(self.sound_button)
+        # self.stage_button = Button(text="all plants")
+        # self.stage_button.bind(on_press=self.next_stage)
+        # button_layout.add_widget(self.stage_button)
+
+        # Sound Button
+        # self.sound_button = ToggleButton(text='Enable Sound', state='normal', size_hint_y=None, height=50)
+        # self.sound_button.bind(on_press=self.toggle_sound)
+        # button_layout.add_widget(self.sound_button)
 
         self.add_widget(button_layout)
 
+        # Create a BoxLayout to hold the radio-style buttons
+        stage_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=50)
+
+        # "Radio Buttons" using ToggleButton with a common group
+        self.stage_col = ToggleButton(text="Colchicum autumnale L", group="stages", state="down")
+        self.stage_digi = ToggleButton(text="Digitalis L", group="stages")
+        self.stage_jaco = ToggleButton(text="Jacobaea vulgaris", group="stages")
+        self.stage_all = ToggleButton(text="All plants", group="stages")
+
+        # Bind buttons
+        self.stage_col.bind(on_press=self.next_stage)
+        self.stage_digi.bind(on_press=self.next_stage)
+        self.stage_jaco.bind(on_press=self.next_stage)
+        self.stage_all.bind(on_press=self.next_stage)
+
+        # Add buttons to layout
+        stage_layout.add_widget(self.stage_col)
+        stage_layout.add_widget(self.stage_digi)
+        stage_layout.add_widget(self.stage_jaco)
+        stage_layout.add_widget(self.stage_all)
+        # Add to main layout
+        self.add_widget(stage_layout)
+        # setting local Variables
+        self.selected_model_path = selected_model_path
         self.plant_name_list = {0: "Colchicum autumnale L", 1: "Digitalis L", 2: "Jacobaea vulgaris"}
         self.color_table = {0: (0, 0.2, 0.69, 1) , 1: (1, 0, 0, 1) , 2: (0, 0, 0.69, 1) }
         self.show_bboxes_conf = False
         self.sound_on = False
+        self.radio_button_pressed = "Colchicum autumnale L"
         self.yolo_model = YOLO(self.convert_path())  # Pfad für das YOlo Modell
         #pygame.mixer.init()
         #pygame.mixer.music.load("Soundfiles/magic-3-278824.mp3")
@@ -81,6 +108,19 @@ class ImageViewer(BoxLayout):
         self.popup = popup
 
     def next_stage(self, instance):
+        if self.stage_col.state == "down":
+            self.radio_button_pressed = "Colchicum autumnale L"
+        elif self.stage_jaco.state == "down":
+            self.radio_button_pressed = "Jacobaea vulgaris"
+        elif self.stage_digi.state == "down":
+            self.radio_button_pressed = "Digitalis L"
+        elif self.stage_all.state == "down":
+            self.radio_button_pressed = "All plants"
+        else:
+            self.radio_button_pressed = "none"
+        if self.show_bboxes_conf:
+            self.draw_bounding_boxes(self.image.source)
+    """ Old function of the Multistage button
         if self.stage_button.text == "Colchicum autumnale L":
             self.stage_button.text = "Digitalis L"
         elif self.stage_button.text == "Digitalis L":
@@ -89,8 +129,7 @@ class ImageViewer(BoxLayout):
             self.stage_button.text = "all plants"
         else:
             self.stage_button.text = "Colchicum autumnale L"
-        if self.show_bboxes_conf:
-            self.draw_bounding_boxes(self.image.source)
+    """
 
     def load_image(self, filechooser, selection, *args):
         if selection:
@@ -124,16 +163,18 @@ class ImageViewer(BoxLayout):
                         Color(*self.color_table[plant_detected.item()])
                         x1, y1, x2, y2 = map(int, box[:4])
                         b, a, width, height = map(int, size[:4])
-                        if self.plant_name_list[plant_detected.item()] == self.stage_button.text:
+                        if self.radio_button_pressed == "none":
+                            print("No Radio Button is pressed")
+                        elif self.plant_name_list[plant_detected.item()] == self.radio_button_pressed:
                             # Vorsicht basis darstellung des Images self.image.width = 800 self.image.height = 500 da die beiden buttons jeweils 50 pixel groß sind
                             Line(rectangle=(x1*img_scale_factor+black_bars_width/2,y1*img_scale_factor+100,width*img_scale_factor,height*img_scale_factor), width = 2) #x1, y1, x2, y2
                             Label(text=f'{conf:.2f}',outline_width=2, pos=(x1*img_scale_factor+black_bars_width/2, y2*img_scale_factor+40))
-                        elif self.stage_button.text == 'all plants':
+                        elif self.radio_button_pressed == 'All plants':
                             Line(rectangle=(x1*img_scale_factor+black_bars_width/2,y1*img_scale_factor+100,width*img_scale_factor,height*img_scale_factor), width = 2) #x1, y1, x2, y2
                             Label(text=f'{conf:.2f}',outline_width=2, pos=(x1*img_scale_factor+black_bars_width/2, y2*img_scale_factor+40))
-                        
-                        if conf > 0.8 and self.sound_on:
-                            pygame.mixer.music.play()
+                        # extra for the sound button
+                        # if conf > 0.8 and self.sound_on:
+                        #    pygame.mixer.music.play()
     def draw_image_corners(self):
         with self.image.canvas.after:
             Color(0, 1, 0, 1)  # Green corner markers
