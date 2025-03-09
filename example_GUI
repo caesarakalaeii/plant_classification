@@ -69,7 +69,7 @@ class ImageViewer(BoxLayout):
         self.color_table = {0: (0, 0.2, 0.69, 1) , 1: (1, 0, 0, 1) , 2: (0, 0, 0.69, 1) }
         self.show_bboxes_conf = False
         self.sound_on = False
-        self.yolo_model = YOLO("training/Models/best_train13.pt")  # Pfad für das YOlo Modell
+        self.yolo_model = YOLO(self.convert_path())  # Pfad für das YOlo Modell
         #pygame.mixer.init()
         #pygame.mixer.music.load("Soundfiles/magic-3-278824.mp3")
 
