@@ -1,3 +1,4 @@
+from docutils.nodes import title
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
@@ -8,6 +9,7 @@ from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.label import Label
 from kivy.graphics import Color, Line, Rectangle, Ellipse
+from kivy.core.window import Window
 from ultralytics import YOLO
 import os
 # import pygame
@@ -19,12 +21,11 @@ class ModelPathSelector(Popup):
     def __init__(self, app, **kwargs):
         super().__init__(title='Select a YOLO Model', size_hint=(0.9, 0.9), **kwargs)
         self.app = app
-        
         layout = BoxLayout(orientation='vertical')
         self.filechooser = FileChooserIconView(path=os.getcwd(), dirselect=True)
         layout.add_widget(self.filechooser)
         
-        btn_select = Button(text='Select Folder', size_hint_y=None, height=50)
+        btn_select = Button(text='Select .pt File', size_hint_y=None, height=50)
         btn_select.bind(on_press=self.select_model_path)
         layout.add_widget(btn_select)
         
@@ -43,7 +44,6 @@ class ImageViewer(BoxLayout):
         # Add canvas to main layout
         self.image = Image()
         self.add_widget(self.image)
-
         button_layout = GridLayout(cols=2, size_hint_y=None, height=50)
 
         self.btn_load = Button(text='Load Image', size_hint_y=None, height=50)
@@ -54,7 +54,7 @@ class ImageViewer(BoxLayout):
         self.toggle_bbox_conf = ToggleButton(text='Show Bounding Boxes & Confidence', state='normal', size_hint_y=None, height=50)
         self.toggle_bbox_conf.bind(on_press=self.toggle_bounding_boxes_confidence)
         button_layout.add_widget(self.toggle_bbox_conf)
-        
+
         # Three-Stage Button with Text Fields
         # self.stage_button = Button(text="all plants")
         # self.stage_button.bind(on_press=self.next_stage)
@@ -95,10 +95,12 @@ class ImageViewer(BoxLayout):
         self.color_table = {0: (0, 0.2, 0.69, 1) , 1: (1, 0, 0, 1) , 2: (0, 0, 0.69, 1) }
         self.show_bboxes_conf = False
         self.sound_on = False
+        self.results_yolo_model = 0
         self.radio_button_pressed = "Colchicum autumnale L"
         self.yolo_model = YOLO(self.convert_path())  # Pfad für das YOlo Modell
         #pygame.mixer.init()
         #pygame.mixer.music.load("Soundfiles/magic-3-278824.mp3")
+        #Window.bind(on_resize=print("lel"))
 
     def show_filechooser(self, instance):
         filechooser = FileChooserIconView(path=os.getcwd())
@@ -119,7 +121,7 @@ class ImageViewer(BoxLayout):
         else:
             self.radio_button_pressed = "none"
         if self.show_bboxes_conf:
-            self.draw_bounding_boxes(self.image.source)
+            self.draw_bounding_boxes()
     """ Old function of the Multistage button
         if self.stage_button.text == "Colchicum autumnale L":
             self.stage_button.text = "Digitalis L"
@@ -136,29 +138,28 @@ class ImageViewer(BoxLayout):
             self.image.source = selection[0]
             self.image.reload()
             if self.show_bboxes_conf:
-                self.draw_bounding_boxes(selection[0])
+                self.draw_bounding_boxes()
         self.popup.dismiss()
-    
+        self.results_yolo_model = self.yolo_model(selection[0])
     def toggle_bounding_boxes_confidence(self, instance):
         self.show_bboxes_conf = instance.state == 'down'
         if self.image.source:
-            self.draw_bounding_boxes(self.image.source)
+            self.draw_bounding_boxes()
         else:
             self.image.canvas.after.clear()
     
     def toggle_sound(self, instance):
         self.sound_on = instance.state == 'down'
 
-    def draw_bounding_boxes(self, image_path):
-        results = self.yolo_model(image_path)
-        orig_y, orig_x =results[0].orig_shape
+    def draw_bounding_boxes(self):
+        orig_y, orig_x =self.results_yolo_model[0].orig_shape
         img_scale_factor =  (self.image.height) / orig_y
         black_bars_width = self.image.width - self.image.height * self.image.image_ratio
         self.image.canvas.after.clear()
         #self.draw_image_corners()
         if self.show_bboxes_conf:
             with self.image.canvas.after:
-                for result in results:
+                for result in self.results_yolo_model:
                     for box, conf, size, plant_detected in zip(result.boxes.xyxy, result.boxes.conf,result.boxes.xywh, result.boxes.cls):
                         Color(*self.color_table[plant_detected.item()])
                         x1, y1, x2, y2 = map(int, box[:4])
