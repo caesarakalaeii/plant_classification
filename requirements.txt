@@ -1,0 +1,6 @@
+requests
+pygbif
+ultralytics
+docutils
+Kivy
+pandas
