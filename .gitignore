@@ -165,3 +165,9 @@ training/run/train12/weights/
 training/run/train13/weights/
 training/Models/best_train13.pt
 training/Models/prototype.pt
+
+# Nix
+result
+result-*
+.direnv/
+.ruff_cache/
